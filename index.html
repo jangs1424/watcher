@@ -102,7 +102,7 @@
 
     .col-header {
       display: grid;
-      grid-template-columns: 52px 1fr 80px 120px;
+      grid-template-columns: 52px 1fr 140px 110px;
       padding: 14px 20px;
       border-bottom: 1px solid var(--border);
       background: rgba(201,168,76,0.04);
@@ -121,7 +121,7 @@
 
     .row {
       display: grid;
-      grid-template-columns: 52px 1fr 80px 120px;
+      grid-template-columns: 52px 1fr 140px 110px;
       align-items: center;
       padding: 18px 20px;
       border-bottom: 1px solid rgba(42,42,46,0.5);
@@ -154,7 +154,7 @@
 
     .team-name { font-size:15px; font-weight:700; letter-spacing:-0.01em; padding-right:12px; }
 
-    .score { font-family:'DM Mono',monospace; font-size:18px; font-weight:500; text-align:right; padding-right:12px; }
+    .score { font-family:'DM Mono',monospace; font-size:15px; font-weight:500; text-align:right; padding-right:12px; letter-spacing:-0.02em; }
     .rank-1 .score { color: var(--gold); }
     .rank-2 .score { color: var(--silver); }
     .rank-3 .score { color: var(--bronze); }
@@ -190,8 +190,8 @@
     }
 
     @media (max-width: 480px) {
-      .col-header { grid-template-columns: 44px 1fr 64px 90px; }
-      .row        { grid-template-columns: 44px 1fr 64px 90px; padding: 16px 14px; }
+      .col-header { grid-template-columns: 44px 1fr 110px 85px; }
+      .row        { grid-template-columns: 44px 1fr 110px 85px; padding: 16px 14px; }
       .team-name  { font-size: 14px; }
       .score      { font-size: 16px; }
       .date       { font-size: 9px; }
@@ -270,15 +270,24 @@
     if (isNaN(d.getTime())) {
       // 구글 폼 기본 포맷: "2025/06/14 오후 8:14:32" 등 처리
       const parts = str.trim().split(' ');
-      const datePart = parts[0] ? parts[0].slice(0, 5) : '——';
-      const timePart = parts[parts.length - 1] ? parts[parts.length - 1].slice(0, 5) : '——';
+      const datePart = parts[0] ? parts[0].replace(/\//g, '.') : '——';
+      // 오전/오후 처리
+      let timePart = '——';
+      for (const p of parts) {
+        if (p.includes(':')) { timePart = p.slice(0, 5); break; }
+      }
       return datePart + '\n' + timePart;
     }
+    const yy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
     const hh = String(d.getHours()).padStart(2, '0');
     const mi = String(d.getMinutes()).padStart(2, '0');
-    return mm + '.' + dd + '\n' + hh + ':' + mi;
+    return yy + '.' + mm + '.' + dd + '\n' + hh + ':' + mi;
+  }
+
+  function formatScore(n) {
+    return n.toLocaleString('ko-KR') + '원';
   }
 
   function parseCSV(text) {
@@ -326,7 +335,7 @@
       row.innerHTML =
         '<div class="rank-num">' + rankDisplay + '</div>' +
         '<div class="team-name">' + team.team_name + '</div>' +
-        '<div class="score">' + team.score + '</div>' +
+        '<div class="score">' + formatScore(team.score) + '</div>' +
         '<div class="date">' + (dateLines[0] || '——') + '<br>' + (dateLines[1] || '——') + '</div>';
       body.appendChild(row);
       setTimeout(function(r) { return function() { r.classList.add('visible'); }; }(row), 60 * i);
