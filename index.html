@@ -126,8 +126,7 @@
       padding: 18px 20px;
       border-bottom: 1px solid rgba(42,42,46,0.5);
       position: relative;
-      opacity: 0;
-      transform: translateY(10px);
+      opacity: 1;
       transition: background 0.2s;
     }
 
@@ -243,7 +242,7 @@
   const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSOu9HBuOr3Q-yPmVVC4VpCfSP1_iygZE1v6JrfG7w9xiqPOXrWDQCqzsAr0MYyfK_LWAWepbtHWSGz/pub?output=csv";
 
   // 자동 갱신 주기 (초)
-  const REFRESH_INTERVAL = 30;
+  const REFRESH_INTERVAL = 10;
 
   // 구글 폼 응답 시트의 컬럼 순서 (0부터 시작)
   // 기본: 타임스탬프(0) | 팀명(1) | 점수(2) | 참여일시(3)
@@ -382,7 +381,7 @@
         '<div class="score">' + formatScore(team.score) + '</div>' +
         '<div class="date">' + (dateLines[0] || '——') + '<br>' + (dateLines[1] || '——') + '</div>';
       body.appendChild(row);
-      setTimeout(function(r) { return function() { r.classList.add('visible'); }; }(row), 60 * i);
+      r.classList.add('visible');
     });
   }
 
