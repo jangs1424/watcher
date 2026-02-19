@@ -235,7 +235,8 @@
   // ✏️  운영자 설정 — 여기만 수정하세요
   // ══════════════════════════════════════════════
 
-  const EVENT_DATE = "2025.06.14";
+  const today = new Date();
+  const EVENT_DATE = today.getFullYear() + "." + String(today.getMonth()+1).padStart(2,"0") + "." + String(today.getDate()).padStart(2,"0");
 
   // 구글 시트 공개 CSV 링크
   // 시트 → 파일 → 공유 → 웹에 게시 → CSV → 링크 복사 → 아래 붙여넣기
