@@ -1,561 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WATCHER</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;700&family=Bebas+Neue&family=Noto+Sans+KR:wght@200;300&display=swap" rel="stylesheet">
-<style>
-  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
-  :root {
-    --bg: #080808;
-    --fg: #c8bfb0;
-    --accent: #8b0000;
-    --dim: #4a4440;
-    --highlight: #e8ddd0;
-    --red: #cc2200;
-  }
-
-  html, body {
-    background: var(--bg);
-    color: var(--fg);
-    font-family: 'Noto Serif KR', serif;
-    height: 100%;
-    overflow: hidden;
-    cursor: default;
-    user-select: none;
-  }
-
-  /* grain overlay */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
-    opacity: 0.04;
-    pointer-events: none;
-    z-index: 100;
-  }
-
-  /* vignette */
-  body::after {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.85) 100%);
-    pointer-events: none;
-    z-index: 99;
-  }
-
-  #stage {
-    position: fixed;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 60px 40px;
-  }
-
-  #text-box {
-    max-width: 480px;
-    width: 100%;
-    min-height: 160px;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: center;
-    position: relative;
-  }
-
-  .line {
-    font-size: clamp(14px, 2.2vw, 18px);
-    font-weight: 300;
-    line-height: 2;
-    letter-spacing: 0.08em;
-    color: var(--fg);
-    opacity: 0;
-    transform: translateY(6px);
-    transition: opacity 0.8s ease, transform 0.8s ease;
-    white-space: pre-wrap;
-  }
-
-  .line.visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  .line.dialogue {
-    color: var(--highlight);
-    font-style: italic;
-    font-weight: 400;
-    padding-left: 1em;
-    border-left: 2px solid var(--accent);
-    margin: 4px 0;
-  }
-
-  .line.sfx {
-    color: var(--dim);
-    font-size: 0.85em;
-    font-family: 'Noto Sans KR', sans-serif;
-    font-weight: 200;
-    letter-spacing: 0.2em;
-  }
-
-  .line.dramatic {
-    font-size: clamp(16px, 2.8vw, 22px);
-    color: var(--highlight);
-    font-weight: 400;
-    letter-spacing: 0.12em;
-  }
-
-  .line.blank {
-    height: 1em;
-    min-height: 1em;
-  }
-
-  /* FINAL TITLE */
-  #final-screen {
-    position: fixed;
-    inset: 0;
-    background: #000;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 1.5s ease;
-    z-index: 50;
-  }
-
-  #final-screen.show {
-    opacity: 1;
-    pointer-events: all;
-  }
-
-  /* Ranking Table Styles */
-  .ranking-container {
-    width: 80%;
-    max-width: 600px;
-    margin-top: 30px;
-    border-top: 1px solid var(--dim);
-    padding-top: 20px;
-    opacity: 0;
-    transform: translateY(20px);
-    transition: all 1s ease 1.8s;
-  }
-  #final-screen.show .ranking-container {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  .ranking-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-family: 'Noto Sans KR', sans-serif;
-    font-size: 14px;
-    color: var(--fg);
-  }
-  .ranking-table th {
-    text-align: left;
-    padding: 10px;
-    border-bottom: 1px solid var(--dim);
-    color: var(--dim);
-    font-weight: 300;
-    letter-spacing: 0.1em;
-  }
-  .ranking-table td {
-    padding: 12px 10px;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-  }
-  .rank-num { color: var(--accent); font-weight: 700; width: 50px; }
-  .team-name { font-weight: 400; }
-  .score { text-align: right; font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.1em; font-size: 18px; }
-
-  #final-sub {
-    font-family: 'Noto Sans KR', sans-serif;
-    font-weight: 200;
-    font-size: clamp(11px, 1.6vw, 14px);
-    letter-spacing: 0.4em;
-    color: var(--dim);
-    margin-bottom: 28px;
-    opacity: 0;
-    transform: translateY(10px);
-    transition: opacity 1s ease 0.8s, transform 1s ease 0.8s;
-  }
-
-  #final-screen.show #final-sub {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  #final-title {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(64px, 14vw, 140px);
-    letter-spacing: 0.25em;
-    color: #fff;
-    line-height: 1;
-    opacity: 0;
-    transform: scaleX(0.92);
-    transition: opacity 1.2s ease 0.3s, transform 1.2s ease 0.3s;
-    text-shadow: 0 0 60px rgba(139,0,0,0.4);
-  }
-
-  #final-screen.show #final-title {
-    opacity: 1;
-    transform: scaleX(1);
-  }
-
-  #final-tagline {
-    font-family: 'Noto Serif KR', serif;
-    font-size: clamp(12px, 1.8vw, 15px);
-    font-weight: 300;
-    letter-spacing: 0.25em;
-    color: var(--dim);
-    margin-top: 24px;
-    opacity: 0;
-    transition: opacity 1s ease 1.4s;
-  }
-
-  #final-screen.show #final-tagline {
-    opacity: 1;
-  }
-
-  /* thin red line decoration on final */
-  #final-screen .deco-line {
-    width: 1px;
-    height: 60px;
-    background: linear-gradient(to bottom, transparent, var(--accent), transparent);
-    margin: 20px 0;
-    opacity: 0;
-    transition: opacity 1s ease 1s;
-  }
-  #final-screen.show .deco-line { opacity: 1; }
-
-  /* next button */
-  #btn-prev {
-    position: fixed;
-    bottom: 48px;
-    left: 48px;
-    background: transparent;
-    border: 1px solid var(--dim);
-    color: var(--dim);
-    font-family: 'Noto Sans KR', sans-serif;
-    font-weight: 200;
-    font-size: 11px;
-    letter-spacing: 0.3em;
-    padding: 12px 24px;
-    cursor: pointer;
-    transition: border-color 0.3s, color 0.3s, background 0.3s;
-    z-index: 200;
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  #btn-prev.ready {
-    opacity: 1;
-    pointer-events: all;
-  }
-
-  #btn-prev:hover {
-    border-color: var(--dim);
-    color: var(--fg);
-    background: rgba(255,255,255,0.04);
-  }
-
-  #btn-next {
-    position: fixed;
-    bottom: 48px;
-    right: 48px;
-    background: transparent;
-    border: 1px solid var(--dim);
-    color: var(--dim);
-    font-family: 'Noto Sans KR', sans-serif;
-    font-weight: 200;
-    font-size: 11px;
-    letter-spacing: 0.3em;
-    padding: 12px 24px;
-    cursor: pointer;
-    transition: border-color 0.3s, color 0.3s, background 0.3s;
-    z-index: 200;
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  #btn-next.ready {
-    opacity: 1;
-    pointer-events: all;
-  }
-
-  #btn-next:hover {
-    border-color: var(--accent);
-    color: var(--highlight);
-    background: rgba(139,0,0,0.08);
-  }
-
-  /* progress dots */
-  #progress {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    z-index: 200;
-  }
-
-  .dot {
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: var(--dim);
-    transition: background 0.4s, transform 0.4s;
-  }
-
-  .dot.active {
-    background: var(--accent);
-    transform: scale(1.4);
-  }
-
-  /* flicker on load */
-  @keyframes flicker {
-    0%,100% { opacity: 1; }
-    50% { opacity: 0.92; }
-    70% { opacity: 0.98; }
-    80% { opacity: 0.88; }
-  }
-
-  #stage { animation: flicker 8s infinite; }
-
-  /* scanlines subtle */
-  #scanlines {
-    position: fixed;
-    inset: 0;
-    background: repeating-linear-gradient(
-      to bottom,
-      transparent,
-      transparent 2px,
-      rgba(0,0,0,0.06) 2px,
-      rgba(0,0,0,0.06) 4px
-    );
-    pointer-events: none;
-    z-index: 98;
-  }
-</style>
-</head>
-<body>
-
-<div id="scanlines"></div>
-
-<div id="stage">
-  <div id="text-box"></div>
-</div>
-
-<div id="final-screen">
-  <p id="final-sub">당신을 지켜보는 누군가</p>
-  <div class="deco-line"></div>
-  <h1 id="final-title">WATCHER</h1>
-  <div class="deco-line"></div>
-  <p id="final-tagline">처음부터 모든 것은 함정이었다</p>
-  
-  <div class="ranking-container">
-    <table class="ranking-table">
-      <thead>
-        <tr>
-          <th style="width: 60px;">RANK</th>
-          <th>TEAM</th>
-          <th style="text-align: right;">SCORE</th>
-        </tr>
-      </thead>
-      <tbody id="ranking-body">
-        <!-- Ranking data will be inserted here -->
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<div id="progress"></div>
-<button id="btn-prev">‹ 이전</button>
-<button id="btn-next">다음 ›</button>
-
-<script>
-// 구글 앱스 스크립트(GAS) 배포 후 받은 웹 앱 URL을 여기에 입력하세요.
-const SPREADSHEET_API_URL = 'https://script.google.com/macros/s/AKfycbzZU4jzQMj_6l5QqtTwFddSebHIc08cSHogZek96DYFfuvLLrUANyWLQuEAiHtMY2-Y/exec';
-
-// Scenes: 기본 대사 데이터 (스프레드시트 로드 실패 시 또는 기본값으로 사용)
-const defaultScenes = [
-  [
-    { text: '...눈앞이 깜깜하다.', cls: 'dramatic' },
-    { text: '몸이 움직이질 않는다.', cls: '' },
-  ],
-  [
-    { text: '' , cls: 'blank' },
-    { text: '여긴 어디지?', cls: 'dramatic' },
-  ],
-  [
-    { text: '나는 분명...', cls: '' },
-    { text: '보물을 찾으러 왔는데?', cls: '' },
-  ],
-  [
-    { text: '보물을 잔뜩 모아서 브로커를 만났고,', cls: '' },
-    { text: '그 이후에는...', cls: '' },
-  ],
-  [
-    { text: '아, 그래!', cls: 'dramatic' },
-    { text: '음료수를 마신 후부터 기억이 없다.', cls: '' },
-  ],
-  [
-    { text: '저 멀리서 어딘가 익숙한 목소리가 들렸다.', cls: '' },
-    { text: '가까이 다가오는 발소리,', cls: '' },
-  ],
-  [
-    { text: '"아유, 생각보다 잘 따라오시더라고요. 저도 재밌었습니다요."', cls: 'dialogue' },
-  ],
-  [
-    { text: '브로커가 생글생글 웃으며 내 앞에 무언가를 내밀었다.', cls: '' },
-    { text: '익숙했던 경비 모자였다.', cls: '' },
-    { text: '' , cls: 'blank' },
-    { text: '이거, 기억나세요?', cls: 'dialogue' },
-  ],
-  [
-    { text: '나는... 보물을 찾으러 온 거였는데.', cls: '' },
-    { text: '이건... 뭐지?', cls: 'dramatic' },
-  ],
-  [
-    { text: '"제가 진짜 못 잡아서 안 잡은 거 같으셨습니까?"', cls: 'dialogue' },
-    { text: '[웃음소리]', cls: 'sfx' },
-    { text: '"하하하... 다들 그렇게 생각하시더라고요."', cls: 'dialogue' },
-  ],
-  [
-    { text: '모든 게... 처음부터...', cls: 'dramatic' },
-    { text: '함정이었구나.', cls: 'dramatic' },
-  ],
-];
-
-let scenes = defaultScenes;
-let rankings = [];
-let currentScene = 0;
-const textBox = document.getElementById('text-box');
-const btnNext = document.getElementById('btn-next');
-const btnPrev = document.getElementById('btn-prev');
-const finalScreen = document.getElementById('final-screen');
-const progressEl = document.getElementById('progress');
-const rankingBody = document.getElementById('ranking-body');
-
-// 1. 데이터 로드 함수
-async function loadSpreadsheetData() {
-  if (SPREADSHEET_API_URL === 'YOUR_GAS_WEB_APP_URL') {
-    console.warn('GAS URL이 설정되지 않았습니다. 기본 데이터를 사용합니다.');
-    initProgress();
-    renderScene(0);
-    return;
-  }
-
-  try {
-    const response = await fetch(SPREADSHEET_API_URL);
-    if (!response.ok) throw new Error('데이터를 불러오는데 실패했습니다.');
-    
-    const data = await response.json();
-    
-    // 랭킹 데이터 처리 (보물 찾기 기록 기준 내림차순 정렬)
-    rankings = data
-      .filter(item => item.teamName && item.score)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 5); // 상위 5팀만 표시
-
-    updateRankingTable();
-    initProgress();
-    renderScene(0);
-  } catch (error) {
-    console.error('Error:', error);
-    // 에러 발생 시에도 기본 대사는 보여줌
-    initProgress();
-    renderScene(0);
-  }
-}
-
-// 2. 랭킹 테이블 업데이트
-function updateRankingTable() {
-  rankingBody.innerHTML = '';
-  rankings.forEach((entry, index) => {
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td class="rank-num">#${index + 1}</td>
-      <td class="team-name">${entry.teamName}</td>
-      <td class="score">${Number(entry.score).toLocaleString()}</td>
-    `;
-    rankingBody.appendChild(row);
-  });
-}
-
-// Build progress dots
-function initProgress() {
-  progressEl.innerHTML = '';
-  scenes.forEach((_, i) => {
-    const d = document.createElement('div');
-    d.className = 'dot' + (i === 0 ? ' active' : '');
-    progressEl.appendChild(d);
-  });
-}
-
-function updateDots() {
-  document.querySelectorAll('.dot').forEach((d, i) => {
-    d.classList.toggle('active', i === currentScene);
-  });
-}
-
-function renderScene(idx) {
-  textBox.innerHTML = '';
-  const scene = scenes[idx];
-
-  scene.forEach((item, i) => {
-    const div = document.createElement('div');
-    div.className = 'line ' + (item.cls || '');
-    div.textContent = item.text;
-    textBox.appendChild(div);
-
-    setTimeout(() => {
-      div.classList.add('visible');
-    }, i * 280 + 60);
-  });
-
-  // prev button: show immediately if not first scene
-  if (idx > 0) {
-    btnPrev.classList.add('ready');
-  } else {
-    btnPrev.classList.remove('ready');
-  }
-
-  const totalDelay = scene.length * 280 + 300;
-  setTimeout(() => {
-    if (idx < scenes.length - 1) {
-      btnNext.textContent = '다음 ›';
-    } else {
-      btnNext.textContent = '계속 ▶';
-    }
-    btnNext.classList.add('ready');
-  }, totalDelay);
-}
-
-btnPrev.addEventListener('click', () => {
-  if (currentScene > 0) {
-    btnNext.classList.remove('ready');
-    btnPrev.classList.remove('ready');
-    currentScene--;
-    updateDots();
-    renderScene(currentScene);
-  }
-});
-
-btnNext.addEventListener('click', () => {
-  btnNext.classList.remove('ready');
-
-  if (currentScene < scenes.length - 1) {
-    currentSc<!DOCTYPE html>
-<html lang="ko">
-<head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>undefined scene — Watcher Rank</title>
@@ -657,8 +102,8 @@ btnNext.addEventListener('click', () => {
 
     .col-header {
       display: grid;
-      grid-template-columns: 52px 1fr 120px;
-      padding: 14px 20px;
+      grid-template-columns: 60px 1fr 200px;
+      padding: 14px 24px;
       border-bottom: 1px solid var(--border);
       background: rgba(201,168,76,0.04);
     }
@@ -675,9 +120,9 @@ btnNext.addEventListener('click', () => {
 
     .row {
       display: grid;
-      grid-template-columns: 52px 1fr 120px;
+      grid-template-columns: 60px 1fr 200px;
       align-items: center;
-      padding: 18px 20px;
+      padding: 20px 24px;
       border-bottom: 1px solid rgba(42,42,46,0.5);
       position: relative;
       opacity: 0;
@@ -706,9 +151,16 @@ btnNext.addEventListener('click', () => {
 
     .medal { display:inline-block; font-size:14px; margin-right:6px; }
 
-    .team-name { font-size:15px; font-weight:700; letter-spacing:-0.01em; padding-right:12px; }
+    .team-name { font-size:16px; font-weight:700; letter-spacing:-0.01em; padding-right:12px; }
 
-    .score { font-family:'DM Mono',monospace; font-size:18px; font-weight:500; text-align:right; padding-right:12px; }
+    .score { 
+      font-family:'DM Mono',monospace; 
+      font-size:20px; 
+      font-weight:500; 
+      text-align:right; 
+      white-space: nowrap;
+    }
+    .score span { font-size: 14px; margin-left: 4px; font-family: 'Noto Serif KR', serif; }
     .rank-1 .score { color: var(--gold); }
     .rank-2 .score { color: var(--silver); }
     .rank-3 .score { color: var(--bronze); }
@@ -744,10 +196,11 @@ btnNext.addEventListener('click', () => {
     }
 
     @media (max-width: 480px) {
-      .col-header { grid-template-columns: 44px 1fr 100px; }
-      .row        { grid-template-columns: 44px 1fr 100px; padding: 16px 14px; }
+      .col-header { grid-template-columns: 44px 1fr 150px; }
+      .row        { grid-template-columns: 44px 1fr 150px; padding: 16px 14px; }
       .team-name  { font-size: 14px; }
       .score      { font-size: 16px; }
+      .score span { font-size: 11px; }
     }
   </style>
 </head>
@@ -841,7 +294,7 @@ btnNext.addEventListener('click', () => {
       row.innerHTML =
         '<div class="rank-num">' + rankDisplay + '</div>' +
         '<div class="team-name">' + team.teamName + '</div>' +
-        '<div class="score">' + Number(team.score).toLocaleString() + '원</div>';
+        '<div class="score">' + Number(team.score).toLocaleString() + '<span>원</span></div>';
       
       body.appendChild(row);
       setTimeout(() => row.classList.add('visible'), 60 * i);
@@ -887,24 +340,6 @@ btnNext.addEventListener('click', () => {
 
   fetchData();
   startCountdown();
-</script>
-</body>
-</html>
-ene++;
-    updateDots();
-    renderScene(currentScene);
-  } else {
-    // Show final screen
-    btnNext.style.display = 'none';
-    progressEl.style.display = 'none';
-    setTimeout(() => {
-      finalScreen.classList.add('show');
-    }, 300);
-  }
-});
-
-// Start
-loadSpreadsheetData();
 </script>
 </body>
 </html>
